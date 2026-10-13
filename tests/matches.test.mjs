@@ -12,6 +12,7 @@ registerHooks({
 });
 
 const { computePeerMatches } = await import('../src/lib/matches.ts');
+const { uniqueSkillNames } = await import('../src/lib/skills.ts');
 
 const allDayAvailability = Object.fromEntries(
   ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -66,6 +67,30 @@ test('keeps peers with a forward skill fit and a sufficient UTC overlap', () => 
   assert.ok(matches[0].overlappingSlots.some((slot) => slot.durationMinutes >= 60));
 });
 
+test('matches skill names case-insensitively when taxonomy ids differ', () => {
+  const learner = profile('learner', {
+    learnSkills: [{ skillId: 'learner-skill-id', skillName: '  pYtHoN   Programming ', category: 'Technology', targetLevel: 'beginner' }],
+  });
+  const teacher = profile('teacher', {
+    teachSkills: [skill('teacher-skill-id', 'Python Programming')],
+  });
+
+  assert.equal(computePeerMatches(learner, [teacher]).length, 1);
+});
+
+test('matches common languages without case differences', () => {
+  const learner = profile('learner', {
+    languages: ['english'],
+    learnSkills: [{ skillId: 'learner-skill-id', skillName: 'Python', category: 'Technology', targetLevel: 'beginner' }],
+  });
+  const teacher = profile('teacher', {
+    languages: ['English'],
+    teachSkills: [skill('teacher-skill-id', 'PYTHON')],
+  });
+
+  assert.equal(computePeerMatches(learner, [teacher]).length, 1);
+});
+
 test('keeps peers with reverse swap fit even without forward fit', () => {
   const learner = profile('learner', { teachSkills: [skill('skill-python', 'Python')] });
   const teacher = profile('teacher', {
@@ -99,4 +124,11 @@ test('rejects availability shorter than the shortest allowed session duration', 
   const teacher = profile('teacher', { teachSkills: [skill('skill-js', 'JavaScript')] });
 
   assert.deepEqual(computePeerMatches(learner, [teacher]), []);
+});
+
+test('deduplicates skill names across case and whitespace variants', () => {
+  assert.deepEqual(
+    uniqueSkillNames(['Python', ' python ', 'PythOn   ', 'Figma']),
+    ['Python', 'Figma']
+  );
 });

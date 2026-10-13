@@ -7,7 +7,7 @@ interface EditSkillsModalProps {
   isOpen: boolean;
   onClose: () => void;
   profile: Profile | null;
-  onSave: (updatedProfile: Profile) => void;
+  onSave: (updatedProfile: Profile) => void | Promise<void>;
 }
 
 export const EditSkillsModal: React.FC<EditSkillsModalProps> = ({
@@ -19,6 +19,8 @@ export const EditSkillsModal: React.FC<EditSkillsModalProps> = ({
   const [teach, setTeach] = useState<string[]>([]);
   const [learn, setLearn] = useState<string[]>([]);
   const [noTeach, setNoTeach] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     if (profile && isOpen) {
@@ -32,15 +34,23 @@ export const EditSkillsModal: React.FC<EditSkillsModalProps> = ({
 
   if (!isOpen || !profile) return null;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const updatedProfile = {
       ...profile,
       teach: noTeach ? [] : teach,
       learn,
       noTeach,
     };
-    onSave(updatedProfile);
-    onClose();
+    setSaving(true);
+    setSaveError('');
+    try {
+      await onSave(updatedProfile);
+      onClose();
+    } catch (error: unknown) {
+      setSaveError(error instanceof Error ? error.message : 'Unable to save skills.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -59,6 +69,11 @@ export const EditSkillsModal: React.FC<EditSkillsModalProps> = ({
 
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-8">
+          {saveError && (
+            <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+              {saveError}
+            </p>
+          )}
           {/* Teach Skills */}
           <div>
             <h3 className="text-sm font-bold text-ink flex items-center gap-2 mb-4">
@@ -109,9 +124,10 @@ export const EditSkillsModal: React.FC<EditSkillsModalProps> = ({
           </button>
           <button
             onClick={handleSave}
-            className="rounded-full bg-lagoon px-6 py-2.5 text-xs font-bold text-white hover:bg-lagoon-dark shadow-md transition-all cursor-pointer"
+            disabled={saving}
+            className="rounded-full bg-lagoon px-6 py-2.5 text-xs font-bold text-white hover:bg-lagoon-dark shadow-md transition-all cursor-pointer disabled:opacity-50"
           >
-            Save Skills
+            {saving ? 'Saving...' : 'Save Skills'}
           </button>
         </div>
       </div>

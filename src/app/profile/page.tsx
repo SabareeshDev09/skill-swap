@@ -34,6 +34,7 @@ import {
 } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/client';
 import type { SkillItem } from '@/types';
+import { normalizeSkillName, uniqueSkillNames } from '@/lib/skills';
 
 // Curated avatar presets with high resolution and diverse styles
 const AVATAR_PRESETS = [
@@ -109,6 +110,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successToast, setSuccessToast] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [activeTab, setActiveTab] = useState<'profile' | 'skills' | 'availability' | 'social'>('profile');
 
   // Form State
@@ -275,26 +277,28 @@ export default function ProfilePage() {
   const handleAddTeachSkill = (skill: string) => {
     const s = skill.trim();
     if (!s) return;
-    if (profile.teach.includes(s)) return;
-    updateField('teach', [...profile.teach, s]);
+    const teach = uniqueSkillNames([...profile.teach, s]);
+    if (teach.length === profile.teach.length) return;
+    updateField('teach', teach);
     updateField('noTeach', false);
     setNewTeachSkill('');
   };
 
   const handleRemoveTeachSkill = (skill: string) => {
-    updateField('teach', profile.teach.filter(x => x !== skill));
+    updateField('teach', profile.teach.filter(x => normalizeSkillName(x) !== normalizeSkillName(skill)));
   };
 
   const handleAddLearnSkill = (skill: string) => {
     const s = skill.trim();
     if (!s) return;
-    if (profile.learn.includes(s)) return;
-    updateField('learn', [...profile.learn, s]);
+    const learn = uniqueSkillNames([...profile.learn, s]);
+    if (learn.length === profile.learn.length) return;
+    updateField('learn', learn);
     setNewLearnSkill('');
   };
 
   const handleRemoveLearnSkill = (skill: string) => {
-    updateField('learn', profile.learn.filter(x => x !== skill));
+    updateField('learn', profile.learn.filter(x => normalizeSkillName(x) !== normalizeSkillName(skill)));
   };
 
   // Language management
@@ -336,6 +340,7 @@ export default function ProfilePage() {
   // Save changes
   const handleSave = async () => {
     setSaving(true);
+    setSaveError('');
     try {
       const updatedProfile = {
         ...profile,
@@ -351,6 +356,7 @@ export default function ProfilePage() {
       setTimeout(() => setSuccessToast(false), 4000);
     } catch (err) {
       console.error('Save profile error:', err);
+      setSaveError(err instanceof Error ? err.message : 'Unable to save your profile.');
     } finally {
       setSaving(false);
     }
@@ -426,6 +432,11 @@ export default function ProfilePage() {
             <div className="font-bold">Profile Updated!</div>
             <div className="text-ink-muted dark:text-white/60">Your avatar and settings were saved successfully.</div>
           </div>
+        </div>
+      )}
+      {saveError && (
+        <div role="alert" className="fixed bottom-6 right-6 z-50 rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 text-xs font-medium text-rose-700 shadow-xl dark:border-rose-900/40 dark:bg-rose-950/70 dark:text-rose-300">
+          {saveError}
         </div>
       )}
 

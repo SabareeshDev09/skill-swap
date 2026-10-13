@@ -10,6 +10,7 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { Profile, PeerMatch, UserTeachSkill, OfferType, Wallet } from '@/types';
+import { normalizeSkillName } from '@/lib/skills';
 import { generateQuoteBreakdown } from '@/lib/pricing';
 
 interface SwapProposalModalProps {
@@ -46,7 +47,7 @@ export const SwapProposalModal: React.FC<SwapProposalModalProps> = ({
     if (match.teacherDesiresSkill) {
       const found = currentUser.teachSkills.find(
         s => s.skillId === match.teacherDesiresSkill?.skillId ||
-             s.skillName.toLowerCase().trim() === match.teacherDesiresSkill?.skillName.toLowerCase().trim()
+             normalizeSkillName(s.skillName) === normalizeSkillName(match.teacherDesiresSkill?.skillName || '')
       );
       if (found) return found;
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { requireUser } from '@/lib/auth/server';
+import { normalizeSkillName } from '@/lib/skills';
 
 export async function GET(req: NextRequest) {
   try {
@@ -136,9 +137,9 @@ export async function POST(req: NextRequest) {
 
     // 4. Resolve taxonomy skills if available
     const { data: taxonomy } = await admin.from('skill_taxonomy').select('id, name');
-    const taxMap = new Map((taxonomy || []).map(t => [t.name.toLowerCase().trim(), t.id]));
-    const skill1Id = skillName ? taxMap.get(skillName.toLowerCase().trim()) || null : null;
-    const skill2Id = proposerSkillName ? taxMap.get(proposerSkillName.toLowerCase().trim()) || null : null;
+    const taxMap = new Map((taxonomy || []).map(t => [normalizeSkillName(t.name), t.id]));
+    const skill1Id = skillName ? taxMap.get(normalizeSkillName(skillName)) || null : null;
+    const skill2Id = proposerSkillName ? taxMap.get(normalizeSkillName(proposerSkillName)) || null : null;
 
     // 5. Create Session Legs
     const sessionLegsToInsert = [

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { SkillItem } from "@/types";
+import { normalizeSkillName, uniqueSkillNames } from "@/lib/skills";
 
 type Props = { value: string[]; onChange: (v: string[]) => void; max: number; disabled?: boolean };
 
@@ -24,13 +25,24 @@ export default function SkillPicker({ value, onChange, max, disabled }: Props) {
     };
   }, []);
 
-  const options = [...new Set([...skills.map((skill) => skill.name), ...value])];
+  const selectedSkills = uniqueSkillNames(value);
+  const options = uniqueSkillNames([...skills.map((skill) => skill.name), ...selectedSkills]);
 
-  const toggle = (s: string) =>
-    onChange(value.includes(s) ? value.filter((x) => x !== s) : value.length < max ? [...value, s] : value);
+  const toggle = (skillName: string) => {
+    const normalizedName = normalizeSkillName(skillName);
+    if (selectedSkills.some((selected) => normalizeSkillName(selected) === normalizedName)) {
+      onChange(selectedSkills.filter((selected) => normalizeSkillName(selected) !== normalizedName));
+    } else if (selectedSkills.length < max) {
+      onChange([...selectedSkills, skillName]);
+    }
+  };
   const add = () => {
-    const s = q.trim();
-    if (s && !value.includes(s) && value.length < max) onChange([...value, s]);
+    const typedName = q.trim();
+    const normalizedName = normalizeSkillName(typedName);
+    const canonicalName = options.find((skillName) => normalizeSkillName(skillName) === normalizedName) || typedName;
+    if (normalizedName && !selectedSkills.some((skillName) => normalizeSkillName(skillName) === normalizedName) && selectedSkills.length < max) {
+      onChange([...selectedSkills, canonicalName]);
+    }
     setQ("");
   };
 
@@ -49,7 +61,7 @@ export default function SkillPicker({ value, onChange, max, disabled }: Props) {
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {options.map((s) => {
-          const on = value.includes(s);
+          const on = selectedSkills.some((selected) => normalizeSkillName(selected) === normalizeSkillName(s));
           return (
             <button
               key={s} type="button" aria-pressed={on} onClick={() => toggle(s)}

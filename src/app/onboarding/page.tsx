@@ -171,6 +171,11 @@ export default function Onboarding() {
     }
     if (step === 3 && f.learn.length === 0)
       return 'Pick at least one skill you want to learn.';
+    if (step === 4 && !Object.values(f.availability || {}).some((slots) => slots.some((slot) => {
+      const [start, end] = slot.split('-');
+      return Boolean(start && end && end > start);
+    })))
+      return 'Set at least one weekly availability window so peers can match with you.';
     return '';
   }
 

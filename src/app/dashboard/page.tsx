@@ -52,6 +52,8 @@ interface SupabaseProfileJoin {
 export default function Dashboard() {
   const router = useRouter();
   const [authProfile, setAuthProfile] = useState<AuthProfile | null>(null);
+  const [storedTeachSkills, setStoredTeachSkills] = useState<UserTeachSkill[] | null>(null);
+  const [storedLearnSkills, setStoredLearnSkills] = useState<UserLearnSkill[] | null>(null);
   const [hasAdminAccess, setHasAdminAccess] = useState(false);
   const [userId, setUserId] = useState('');
   const [authEmail, setAuthEmail] = useState('');
@@ -208,31 +210,60 @@ export default function Dashboard() {
 
             if (dbProfile && dbProfile.is_onboarded) {
               const [teachRes, learnRes] = await Promise.all([
-                supabase.from('user_skills_teach').select('level, hourly_rate, years_experience, allowed_durations, skill_taxonomy(name)').eq('user_id', user.id),
-                supabase.from('user_skills_learn').select('target_level, goal, skill_taxonomy(name)').eq('user_id', user.id),
+                supabase.from('user_skills_teach').select('skill_id, level, hourly_rate, years_experience, allowed_durations, skill_taxonomy(id, name, category)').eq('user_id', user.id),
+                supabase.from('user_skills_learn').select('skill_id, target_level, goal, skill_taxonomy(id, name, category)').eq('user_id', user.id),
               ]);
               const teachRows = (teachRes.data || []) as unknown as Array<{
+                skill_id: string;
                 level: 'beginner' | 'intermediate' | 'advanced' | 'expert' | null;
                 hourly_rate: number;
                 years_experience: number | null;
                 allowed_durations: number[] | null;
-                skill_taxonomy: { name?: string } | null;
+                skill_taxonomy: { id?: string; name?: string; category?: string } | null;
               }>;
               const learnRows = (learnRes.data || []) as unknown as Array<{
+                skill_id: string;
+                goal: string | null;
                 target_level: 'beginner' | 'intermediate' | 'advanced' | 'expert' | null;
-                skill_taxonomy: { name?: string } | null;
+                skill_taxonomy: { id?: string; name?: string; category?: string } | null;
               }>;
-              const teachSkills = teachRows.map((skill) => skill.skill_taxonomy?.name || 'Skill');
-              const learnSkills = learnRows.map((skill) => skill.skill_taxonomy?.name || 'Skill');
+              const teachSkills: UserTeachSkill[] = teachRows.flatMap((skill) => {
+                const taxonomy = skill.skill_taxonomy;
+                if (!taxonomy?.id || !taxonomy.name || !taxonomy.category) return [];
+                return [{
+                  skillId: skill.skill_id,
+                  skillName: taxonomy.name,
+                  category: taxonomy.category,
+                  level: skill.level || 'intermediate',
+                  yearsExperience: Number(skill.years_experience ?? 1),
+                  hourlyRate: skill.hourly_rate,
+                  allowedDurations: skill.allowed_durations || [],
+                }];
+              });
+              const learnSkills: UserLearnSkill[] = learnRows.flatMap((skill) => {
+                const taxonomy = skill.skill_taxonomy;
+                if (!taxonomy?.id || !taxonomy.name || !taxonomy.category) return [];
+                return [{
+                  skillId: skill.skill_id,
+                  skillName: taxonomy.name,
+                  category: taxonomy.category,
+                  targetLevel: skill.target_level || 'beginner',
+                  goal: skill.goal || undefined,
+                }];
+              });
+              setStoredTeachSkills(teachSkills);
+              setStoredLearnSkills(learnSkills);
+              const teachNames = teachSkills.map((skill) => skill.skillName);
+              const learnNames = learnSkills.map((skill) => skill.skillName);
 
               profile = {
                 name: dbProfile.full_name || deriveNameFromEmail(user.email) || 'Member',
                 avatar: dbProfile.avatar_url || '',
                 sex: 'other',
                 dob: '1998-01-01',
-                teach: teachSkills,
-                noTeach: teachSkills.length === 0,
-                learn: learnSkills,
+                teach: teachNames,
+                noTeach: teachNames.length === 0,
+                learn: learnNames,
                 bio: dbProfile.bio || '',
                 city: dbProfile.city || '',
                 country: dbProfile.country || '',
@@ -323,7 +354,7 @@ export default function Dashboard() {
     const experienceYears = authProfile.experienceYears ?? 0;
     const allowedDurations = authProfile.allowedDurations || [];
 
-    const teachSkills: UserTeachSkill[] = authProfile.noTeach
+    const fallbackTeachSkills: UserTeachSkill[] = authProfile.noTeach
       ? []
       : authProfile.teach.map((skillName, index) => ({
           skillId: `sk-teach-${index}`,
@@ -337,13 +368,15 @@ export default function Dashboard() {
         }));
 
     // Map learning skills from onboarding/profile
-    const learnSkills: UserLearnSkill[] = authProfile.learn.map((skillName, index) => ({
+    const fallbackLearnSkills: UserLearnSkill[] = authProfile.learn.map((skillName, index) => ({
       skillId: `sk-learn-${index}`,
       skillName,
       category: 'Skill Exchange',
       targetLevel: authProfile.learnLevel || 'beginner',
       goal: `Learn ${skillName} from vetted peers`,
     }));
+    const teachSkills = storedTeachSkills ?? fallbackTeachSkills;
+    const learnSkills = storedLearnSkills ?? fallbackLearnSkills;
 
     return {
       id: userId,
@@ -368,7 +401,7 @@ export default function Dashboard() {
       availability: authProfile.availability || {},
       app_metadata: hasAdminAccess ? { role: 'admin' } : null,
     };
-  }, [authProfile, userId, authEmail, hasAdminAccess]);
+  }, [authProfile, storedTeachSkills, storedLearnSkills, userId, authEmail, hasAdminAccess]);
 
   // Compute live peer matches dynamically based on the onboarded skills
   const peerMatches = useMemo(() => {
@@ -992,8 +1025,54 @@ export default function Dashboard() {
         isOpen={isEditSkillsOpen}
         onClose={() => setIsEditSkillsOpen(false)}
         profile={authProfile}
-        onSave={(updatedProfile) => {
-          saveProfile(updatedProfile);
+        onSave={async (updatedProfile) => {
+          await saveProfile(updatedProfile);
+          const supabase = createClient();
+          const [teachRes, learnRes] = await Promise.all([
+            supabase.from('user_skills_teach').select('skill_id, level, hourly_rate, years_experience, allowed_durations, skill_taxonomy(id, name, category)').eq('user_id', userId),
+            supabase.from('user_skills_learn').select('skill_id, target_level, goal, skill_taxonomy(id, name, category)').eq('user_id', userId),
+          ]);
+          if (teachRes.error || learnRes.error) {
+            throw new Error('Skills saved, but the updated matching profile could not be refreshed.');
+          }
+          const teachRows = (teachRes.data || []) as unknown as Array<{
+            skill_id: string;
+            level: UserTeachSkill['level'] | null;
+            hourly_rate: number;
+            years_experience: number | null;
+            allowed_durations: number[] | null;
+            skill_taxonomy: { name?: string; category?: string } | null;
+          }>;
+          const learnRows = (learnRes.data || []) as unknown as Array<{
+            skill_id: string;
+            target_level: UserLearnSkill['targetLevel'] | null;
+            goal: string | null;
+            skill_taxonomy: { name?: string; category?: string } | null;
+          }>;
+          setStoredTeachSkills(teachRows.flatMap((skill) => {
+            const taxonomy = skill.skill_taxonomy;
+            if (!taxonomy?.name || !taxonomy.category) return [];
+            return [{
+              skillId: skill.skill_id,
+              skillName: taxonomy.name,
+              category: taxonomy.category,
+              level: skill.level || 'intermediate',
+              yearsExperience: Number(skill.years_experience ?? 1),
+              hourlyRate: skill.hourly_rate,
+              allowedDurations: skill.allowed_durations || [],
+            }];
+          }));
+          setStoredLearnSkills(learnRows.flatMap((skill) => {
+            const taxonomy = skill.skill_taxonomy;
+            if (!taxonomy?.name || !taxonomy.category) return [];
+            return [{
+              skillId: skill.skill_id,
+              skillName: taxonomy.name,
+              category: taxonomy.category,
+              targetLevel: skill.target_level || 'beginner',
+              goal: skill.goal || undefined,
+            }];
+          }));
           setAuthProfile(updatedProfile);
         }}
       />

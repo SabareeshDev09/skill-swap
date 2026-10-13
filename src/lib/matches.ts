@@ -1,16 +1,17 @@
 import type { Profile, PeerMatch, UserTeachSkill, UserLearnSkill } from '../types';
 import { generateQuoteBreakdown } from './pricing';
 import { findOverlappingSlots } from './availability';
+import { normalizeSkillName } from './skills';
 
 function matchesSkill(skillId: string, skillName: string, candidate: { skillId: string; skillName: string }): boolean {
   return skillId === candidate.skillId ||
-    skillName.trim().toLowerCase() === candidate.skillName.trim().toLowerCase();
+    normalizeSkillName(skillName) === normalizeSkillName(candidate.skillName);
 }
 
 function shortestAllowedDuration(skills: UserTeachSkill[]): number {
   const durations = skills.flatMap((skill) => skill.allowedDurations)
     .filter((duration) => Number.isInteger(duration) && duration > 0);
-  return durations.length > 0 ? Math.min(...durations) : Number.POSITIVE_INFINITY;
+  return durations.length > 0 ? Math.min(...durations) : 60;
 }
 
 export function computePeerMatches(learner: Profile, teachers: Profile[]): PeerMatch[] {
@@ -22,8 +23,9 @@ export function computePeerMatches(learner: Profile, teachers: Profile[]): PeerM
     }
 
     // 1. Language intersection check (Hard filter: >= 1 common language)
-    const commonLanguages = learner.languages.filter(lang =>
-      teacher.languages.includes(lang)
+    const teacherLanguages = new Set(teacher.languages.map(normalizeSkillName));
+    const commonLanguages = learner.languages.filter((language) =>
+      teacherLanguages.has(normalizeSkillName(language))
     );
     if (commonLanguages.length === 0) {
       continue;
