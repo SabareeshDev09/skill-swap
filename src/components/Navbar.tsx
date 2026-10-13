@@ -7,7 +7,6 @@ import {
   ArrowRightLeft, 
   Calendar, 
   Wallet, 
-  IndianRupee,
   BookOpen, 
   Menu,
   Sun,
@@ -244,8 +243,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Open wallet"
               aria-label={`Open wallet with ${Math.floor(wallet.availablePaise / 100)} skill points available`}
             >
-              <IndianRupee className="h-3.5 w-3.5" strokeWidth={2.25} />
-              <span>{Math.floor(wallet.availablePaise / 100)}</span>
+              <span className="rounded-sm border border-current/35 px-1 py-px font-mono text-[9px] font-extrabold leading-none tracking-tight">SP</span>
+              <span>{Math.floor(wallet.availablePaise / 100)} SP</span>
             </button>
 
             <button
