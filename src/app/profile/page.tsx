@@ -163,6 +163,12 @@ export default function ProfilePage() {
         supabase.from('user_skills_teach').select('hourly_rate, years_experience, allowed_durations, level, skill_taxonomy(name)').eq('user_id', user.id),
         supabase.from('user_skills_learn').select('target_level, skill_taxonomy(name)').eq('user_id', user.id),
       ]);
+      if (teachRes.error || learnRes.error) {
+        console.error('Load profile skills error:', teachRes.error || learnRes.error);
+        setSaveError('Unable to load your saved skills. Please refresh the page and try again.');
+        setLoading(false);
+        return;
+      }
       const teachRows = (teachRes.data || []) as unknown as Array<{
         hourly_rate: number;
         years_experience: number | null;
@@ -199,7 +205,6 @@ export default function ProfilePage() {
       };
       setProfile(saved);
       setCustomAvatarUrl(saved.avatar);
-      saveProfile(saved);
       setLoading(false);
     };
 
