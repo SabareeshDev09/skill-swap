@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { requireUser } from '@/lib/auth/server';
 
@@ -25,7 +25,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    if (session.status !== 'SCHEDULED') {
+    if (session.status === 'CANCELLED') {
+      return NextResponse.json({ success: true, idempotent: true, session });
+    }
+
+    if (session.status !== 'SCHEDULED' && session.status !== 'PENDING_CONFIRMATION') {
       return NextResponse.json({ error: `Cannot cancel session with status ${session.status}` }, { status: 400 });
     }
 
@@ -36,39 +40,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized to cancel this session' }, { status: 403 });
     }
 
-    const chargedPaise = session.charged_tokens * 100;
+    const chargedPaise = Number(session.charged_tokens) * 100;
     const teacherPayoutPaise = Math.round(Number(session.teacher_payout_tokens) * 100);
 
-    const { data: learnerWallet } = await admin
+    const { data: learnerWallet, error: learnerWalletError } = await admin
       .from('wallets')
       .select('*')
       .eq('user_id', session.learner_id)
       .single();
 
-    const { data: teacherWallet } = await admin
+    const { data: teacherWallet, error: teacherWalletError } = await admin
       .from('wallets')
       .select('*')
       .eq('user_id', session.teacher_id)
       .single();
+
+    if (learnerWalletError || !learnerWallet) {
+      return NextResponse.json({ error: 'Learner wallet could not be verified' }, { status: 409 });
+    }
 
     const now = Date.now();
     const scheduledStartTime = session.scheduled_start ? new Date(session.scheduled_start).getTime() : now;
     const hoursUntilSession = (scheduledStartTime - now) / (1000 * 60 * 60);
 
     if (isTeacher) {
-      // 1. Teacher cancelled: 100% refund to learner + 1 Strike on teacher (PRD §6.3)
-      if (learnerWallet) {
-        await admin
-          .from('wallets')
-          .update({
-            held_paise: Math.max(0, learnerWallet.held_paise - chargedPaise),
-            available_paise: learnerWallet.available_paise + chargedPaise,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', session.learner_id);
+      if ((learnerWallet.held_paise ?? 0) < chargedPaise) {
+        return NextResponse.json({ error: 'Insufficient held funds to cancel this session' }, { status: 409 });
       }
 
-      // Add strike to teacher profile
+      await admin
+        .from('wallets')
+        .update({
+          held_paise: Math.max(0, learnerWallet.held_paise - chargedPaise),
+          available_paise: learnerWallet.available_paise + chargedPaise,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', session.learner_id);
+
       const { data: teacherProfile } = await admin
         .from('profiles')
         .select('strikes_count')
@@ -81,7 +89,6 @@ export async function POST(req: NextRequest) {
         .update({ strikes_count: newStrikes })
         .eq('id', session.teacher_id);
 
-      // Ledger refund
       await admin.from('ledger_transactions').insert({
         reference_id: session.id,
         transaction_type: 'REFUND',
@@ -96,19 +103,19 @@ export async function POST(req: NextRequest) {
         },
       });
     } else {
-      // 2. Learner cancelled
       if (hoursUntilSession >= 24) {
-        // >= 24h: 100% full refund
-        if (learnerWallet) {
-          await admin
-            .from('wallets')
-            .update({
-              held_paise: Math.max(0, learnerWallet.held_paise - chargedPaise),
-              available_paise: learnerWallet.available_paise + chargedPaise,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('user_id', session.learner_id);
+        if ((learnerWallet.held_paise ?? 0) < chargedPaise) {
+          return NextResponse.json({ error: 'Insufficient held funds to cancel this session' }, { status: 409 });
         }
+
+        await admin
+          .from('wallets')
+          .update({
+            held_paise: Math.max(0, learnerWallet.held_paise - chargedPaise),
+            available_paise: learnerWallet.available_paise + chargedPaise,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', session.learner_id);
 
         await admin.from('ledger_transactions').insert({
           reference_id: session.id,
@@ -124,23 +131,24 @@ export async function POST(req: NextRequest) {
           },
         });
       } else {
-        // < 24h: 50% late fee to teacher, 50% refund to learner (PRD §6.3 & §8)
         const halfCharged = Math.round(chargedPaise / 2);
         const halfTeacherPayout = Math.round(teacherPayoutPaise / 2);
 
-        if (learnerWallet) {
-          await admin
-            .from('wallets')
-            .update({
-              held_paise: Math.max(0, learnerWallet.held_paise - chargedPaise),
-              available_paise: learnerWallet.available_paise + halfCharged,
-              lifetime_spent_paise: (learnerWallet.lifetime_spent_paise || 0) + halfCharged,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('user_id', session.learner_id);
+        if ((learnerWallet.held_paise ?? 0) < chargedPaise) {
+          return NextResponse.json({ error: 'Insufficient held funds to cancel this session' }, { status: 409 });
         }
 
-        if (teacherWallet) {
+        await admin
+          .from('wallets')
+          .update({
+            held_paise: Math.max(0, learnerWallet.held_paise - chargedPaise),
+            available_paise: learnerWallet.available_paise + halfCharged,
+            lifetime_spent_paise: (learnerWallet.lifetime_spent_paise || 0) + halfCharged,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', session.learner_id);
+
+        if (teacherWallet && !teacherWalletError) {
           await admin
             .from('wallets')
             .update({
@@ -180,7 +188,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Update Session status to CANCELLED
     const { data: updatedSession } = await admin
       .from('sessions')
       .update({

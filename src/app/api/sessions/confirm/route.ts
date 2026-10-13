@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
 import { requireUser } from '@/lib/auth/server';
 
@@ -15,7 +15,6 @@ export async function POST(req: NextRequest) {
 
     const admin = getSupabaseAdmin();
 
-    // 1. Fetch current session state
     const { data: session, error: sessionFetchError } = await admin
       .from('sessions')
       .select('*')
@@ -33,11 +32,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized to confirm this session' }, { status: 403 });
     }
 
+    if (session.status === 'SETTLED') {
+      return NextResponse.json({ success: true, settled: true, idempotent: true, session });
+    }
+
+    if (session.status === 'CANCELLED') {
+      return NextResponse.json({ error: 'This session has already been cancelled' }, { status: 409 });
+    }
+
     const updatedTeacherConfirmed = isTeacher ? true : (session.teacher_confirmed || false);
     const updatedLearnerConfirmed = isLearner ? true : (session.learner_confirmed || false);
     const bothConfirmed = updatedTeacherConfirmed && updatedLearnerConfirmed;
 
-    // 2. If both have not confirmed yet, just update the single participant confirmation
     if (!bothConfirmed) {
       const { data: updatedSession, error: updateError } = await admin
         .from('sessions')
@@ -60,48 +66,52 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 3. Both confirmed: execute atomic escrow release
-    const chargedPaise = session.charged_tokens * 100;
+    const chargedPaise = Number(session.charged_tokens) * 100;
     const payoutPaise = Math.round(Number(session.teacher_payout_tokens) * 100);
     const feePaise = Math.round(Number(session.platform_fee_tokens) * 100);
 
-    // Update Learner Wallet (deduct from held_paise)
-    const { data: learnerWallet } = await admin
+    const { data: learnerWallet, error: learnerWalletError } = await admin
       .from('wallets')
       .select('*')
       .eq('user_id', session.learner_id)
       .single();
 
-    if (learnerWallet) {
-      await admin
-        .from('wallets')
-        .update({
-          held_paise: Math.max(0, learnerWallet.held_paise - chargedPaise),
-          lifetime_spent_paise: (learnerWallet.lifetime_spent_paise || 0) + chargedPaise,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', session.learner_id);
+    if (learnerWalletError || !learnerWallet) {
+      return NextResponse.json({ error: 'Learner wallet could not be verified' }, { status: 409 });
     }
 
-    // Update Teacher Wallet (credit payout to available_paise)
-    const { data: teacherWallet } = await admin
+    if ((learnerWallet.held_paise ?? 0) < chargedPaise) {
+      return NextResponse.json({ error: 'Insufficient held funds for this session' }, { status: 409 });
+    }
+
+    const { data: teacherWallet, error: teacherWalletError } = await admin
       .from('wallets')
       .select('*')
       .eq('user_id', session.teacher_id)
       .single();
 
-    if (teacherWallet) {
-      await admin
-        .from('wallets')
-        .update({
-          available_paise: teacherWallet.available_paise + payoutPaise,
-          lifetime_earned_paise: (teacherWallet.lifetime_earned_paise || 0) + payoutPaise,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', session.teacher_id);
+    if (teacherWalletError || !teacherWallet) {
+      return NextResponse.json({ error: 'Teacher wallet could not be verified' }, { status: 409 });
     }
 
-    // Record RELEASE in ledger_transactions
+    await admin
+      .from('wallets')
+      .update({
+        held_paise: learnerWallet.held_paise - chargedPaise,
+        lifetime_spent_paise: (learnerWallet.lifetime_spent_paise || 0) + chargedPaise,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', session.learner_id);
+
+    await admin
+      .from('wallets')
+      .update({
+        available_paise: teacherWallet.available_paise + payoutPaise,
+        lifetime_earned_paise: (teacherWallet.lifetime_earned_paise || 0) + payoutPaise,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', session.teacher_id);
+
     await admin.from('ledger_transactions').upsert({
       reference_id: session.id,
       transaction_type: 'RELEASE',
@@ -116,7 +126,6 @@ export async function POST(req: NextRequest) {
       },
     }, { onConflict: 'idempotency_key' });
 
-    // Record FEE in ledger_transactions
     await admin.from('ledger_transactions').upsert({
       reference_id: session.id,
       transaction_type: 'FEE',
@@ -129,7 +138,6 @@ export async function POST(req: NextRequest) {
       },
     }, { onConflict: 'idempotency_key' });
 
-    // Update Session status to SETTLED
     const { data: settledSession, error: settleError } = await admin
       .from('sessions')
       .update({

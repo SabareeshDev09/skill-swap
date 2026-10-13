@@ -1,7 +1,6 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo } from 'react';
-import Image from 'next/image';
 import {
   ArrowRightLeft,
   Calendar,
@@ -14,14 +13,10 @@ import {
   Send,
   AlertTriangle,
   Search,
-  MessageSquare,
   Sparkles,
   ChevronRight,
-  Shield,
-  Layers,
   CheckCircle2,
   CalendarDays,
-  UserCheck,
   TrendingDown,
 } from 'lucide-react';
 import { Offer, SessionLeg, ChatMessage, Profile } from '@/types';
@@ -59,7 +54,6 @@ interface SwapsViewProps {
   onAcceptProposedTime: (messageId: string, meetLink: string) => void;
   onAcceptOffer?: (offerId: string) => Promise<void> | void;
   onDeclineOffer?: (offerId: string) => Promise<void> | void;
-  onConfirmSession?: (sessionId: string) => void;
   onDisputeSession?: (sessionId: string, reason: string) => void;
   onNavigateToDiscover: () => void;
   selectedSwapId?: string | null;
@@ -75,7 +69,6 @@ export const SwapsView: React.FC<SwapsViewProps> = ({
   onAcceptProposedTime,
   onAcceptOffer,
   onDeclineOffer,
-  onConfirmSession,
   onNavigateToDiscover,
   selectedSwapId: controlledSelectedSwapId,
   onSelectSwapId,
@@ -664,7 +657,7 @@ export const SwapsView: React.FC<SwapsViewProps> = ({
                       {getStatusBadge(activeSwap.status)}
                     </div>
                     <p className="text-xs text-ink/60 mt-0.5">
-                      Escrow Swap Thread • {activeSwap.type === 'SWAP' ? 'Dual-Leg Skill Exchange' : 'Direct Learning Session'}
+                      Escrow Swap Thread â€¢ {activeSwap.type === 'SWAP' ? 'Dual-Leg Skill Exchange' : 'Direct Learning Session'}
                     </p>
                   </div>
                 </div>
@@ -742,7 +735,7 @@ export const SwapsView: React.FC<SwapsViewProps> = ({
               {/* Chat Stream Messages */}
               <div className="h-96 overflow-y-auto p-6 space-y-4 bg-mist-subtle/20">
                 <div className="rounded-2xl bg-mist border border-ink/6 p-3 text-center text-xs text-ink/60 font-mono">
-                  🔒 Ephemeral escrow thread for {activeSwap.partnerName} • Meet links generate automatically upon acceptance
+                  ðŸ”’ Ephemeral escrow thread for {activeSwap.partnerName} â€¢ Meet links generate automatically upon acceptance
                 </div>
 
                 {activeMessages.map(msg => {
@@ -765,7 +758,7 @@ export const SwapsView: React.FC<SwapsViewProps> = ({
                           <div className="mt-3">
                             <div className="text-sm font-bold text-ink flex items-center gap-2">
                               <Clock className="h-4 w-4 text-lagoon" />
-                              <span>{String(msg.metadata?.proposedDate || '')} • {String(msg.metadata?.proposedTime || '')}</span>
+                              <span>{String(msg.metadata?.proposedDate || '')} â€¢ {String(msg.metadata?.proposedTime || '')}</span>
                             </div>
                             <p className="text-xs text-ink/60 mt-1">
                               Proposed by {isMe ? 'you' : activeSwap.partnerName}. Confirming generates an active Google Meet link.
@@ -966,3 +959,6 @@ export const SwapsView: React.FC<SwapsViewProps> = ({
     </div>
   );
 };
+
+
+

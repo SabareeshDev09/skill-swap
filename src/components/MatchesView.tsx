@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
@@ -6,7 +6,6 @@ import {
   ArrowRightLeft, 
   Search, 
   Calendar,
-  Sparkles,
   Zap
 } from 'lucide-react';
 import { PeerMatch, Profile, SessionLeg } from '@/types';
@@ -113,7 +112,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
             <div className="mt-5 pt-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs font-mono font-semibold text-white/90 uppercase border-t border-white/20 inline-flex w-fit">
               <span className="tracking-wide">I CAN TEACH <span className="text-white bg-white/20 px-2 py-0.5 rounded ml-1">{currentUser.teachSkills[0]?.skillName || 'ANYTHING'}</span></span>
               <ArrowRightLeft className="w-3.5 h-3.5 text-white/50 hidden sm:block mx-1" />
-              <span className="tracking-wide">I WANT TO LEARN <span className="text-[var(--color-accent)] bg-[var(--color-accent)]/20 px-2 py-0.5 rounded ml-1 mr-1">{currentUser.learnSkills[0]?.skillName || 'SOMETHING NEW'}</span> →</span>
+              <span className="tracking-wide">I WANT TO LEARN <span className="text-[var(--color-accent)] bg-[var(--color-accent)]/20 px-2 py-0.5 rounded ml-1 mr-1">{currentUser.learnSkills[0]?.skillName || 'SOMETHING NEW'}</span> â†’</span>
             </div>
           </div>
         </div>
@@ -201,7 +200,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                 
                 {/* Translucent "NN% match" badge top-right */}
                 <div className="absolute top-4 right-4 bg-[var(--color-bg)]/80 backdrop-blur px-2.5 py-1 rounded-md text-[10px] font-bold border border-[var(--color-border)] text-[var(--color-text)] shadow-sm z-10 flex items-center gap-1">
-                  <span className="text-[var(--color-accent)]">✦</span> {match.matchScore}% match
+                  <span className="text-[var(--color-accent)]">âœ¦</span> {match.matchScore}% match
                 </div>
 
                 {/* Large typographic glyph background */}
@@ -290,7 +289,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
           {/* Week Range Header (derived) */}
           <div className="flex items-center justify-between text-xs font-medium text-[var(--color-text-muted)] mb-3 pb-3 border-b border-[var(--color-border)]">
             <span>October 2026</span>
-            <span>12 — 18</span>
+            <span>12 â€” 18</span>
           </div>
           
           {/* Day Strip */}
@@ -324,7 +323,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                     {session.skillName}
                   </div>
                   <div className="text-[10px] text-[var(--color-text-muted)] mt-0.5 truncate">
-                    with {session.teacherId === currentUser.id ? session.learnerName : session.teacherName} · {session.durationMinutes}m
+                    with {session.teacherId === currentUser.id ? session.learnerName : session.teacherName} Â· {session.durationMinutes}m
                   </div>
                 </div>
               ))
@@ -335,3 +334,6 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
     </div>
   );
 };
+
+
+
