@@ -282,16 +282,22 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-ink/8 py-10 bg-mist">
-        <div className="mx-auto max-w-6xl px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-ink/60">
-          <div className="flex flex-col gap-1 text-center md:text-left">
-            <span>SkillSwap Platform • 18+ members only • Stored value protected by double-entry ledger.</span>
-            <span className="text-ink/40">© {new Date().getFullYear()} SkillSwap. All rights reserved.</span>
+      <footer className="border-t border-ink/10 bg-mist-pure/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl flex-col gap-7 px-6 py-8 sm:py-10 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3 text-left">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink text-white dark:bg-saffron dark:text-black">
+              <ArrowRightLeft className="h-4 w-4" />
+            </div>
+            <div className="flex flex-col gap-1 text-xs leading-relaxed text-ink/65">
+              <span className="font-semibold text-ink">SkillSwap Platform</span>
+              <span>18+ members only · Stored value protected by double-entry ledger.</span>
+              <span className="text-ink/45">© {new Date().getFullYear()} SkillSwap. All rights reserved.</span>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center md:justify-end gap-6">
-            <Link href="/privacy" className="hover:text-ink transition-colors font-medium">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-ink transition-colors font-medium">Terms of Service</Link>
-          </div>
+          <nav aria-label="Legal" className="flex flex-wrap items-center gap-x-6 gap-y-2 pl-11 text-xs font-semibold text-ink/65 md:pl-0">
+            <Link href="/privacy" className="transition-colors hover:text-lagoon focus-visible:text-lagoon">Privacy Policy</Link>
+            <Link href="/terms" className="transition-colors hover:text-lagoon focus-visible:text-lagoon">Terms of Service</Link>
+          </nav>
         </div>
       </footer>
     </div>

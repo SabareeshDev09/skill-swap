@@ -59,11 +59,21 @@
 
 body {
   background-color: var(--bg);
+  background-image:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 24rem),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 32%, transparent), transparent 24rem);
+  background-attachment: fixed;
   font-family: var(--font-sans);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+::selection {
+  background: var(--accent);
+  color: #fff;
 }
 
 :focus-visible {

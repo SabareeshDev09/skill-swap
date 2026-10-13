@@ -7,6 +7,7 @@ import {
   ArrowRightLeft, 
   Calendar, 
   Wallet, 
+  IndianRupee,
   BookOpen, 
   Menu,
   Sun,
@@ -222,7 +223,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
         {/* Topbar */}
-        <header className="h-16 shrink-0 border-b border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-between px-4 sm:px-6">
+        <header className="h-16 shrink-0 border-b border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-xl flex items-center justify-between px-4 sm:px-6 shadow-[0_1px_0_rgba(255,255,255,0.03)]">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setMobileMenuOpen(true)}
@@ -231,7 +232,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Menu className="h-5 w-5" />
             </button>
             <div className="text-sm">
-              <span className="text-[var(--color-text-muted)]">My workspace › </span>
+              <span className="text-[var(--color-text-muted)]">My workspace <span className="mx-1 text-[var(--color-border)]">/</span></span>
               <span className="font-semibold text-[var(--color-text)]">{getBreadcrumb()}</span>
             </div>
           </div>
@@ -239,16 +240,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={onOpenWallet}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-semibold text-xs hover:opacity-90 transition-opacity cursor-pointer border border-[var(--color-accent)]/20 shadow-xs"
-              title="Wallet Balance"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-semibold text-xs hover:bg-[var(--color-accent)] hover:text-white transition-colors cursor-pointer border border-[var(--color-accent)]/20 shadow-xs"
+              title="Open wallet"
+              aria-label={`Open wallet with ${Math.floor(wallet.availablePaise / 100)} skill points available`}
             >
-              <Wallet className="h-3.5 w-3.5" />
-              <span>₹{Math.floor(wallet.availablePaise / 100)}</span>
+              <IndianRupee className="h-3.5 w-3.5" strokeWidth={2.25} />
+              <span>{Math.floor(wallet.availablePaise / 100)}</span>
             </button>
 
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="p-2 rounded-full hover:bg-[var(--color-surface-2)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors cursor-pointer"
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
               <Sun className="h-4 w-4 hidden dark:block" />
               <Moon className="h-4 w-4 block dark:hidden" />
