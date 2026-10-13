@@ -4,6 +4,24 @@ export interface OverlappingSlot {
   durationMinutes: number;
 }
 
+export function buildAvailabilitySlot(startTime: string, endTime: string): string[] {
+  const start = startTime?.trim() ?? '';
+  const end = endTime?.trim() ?? '';
+
+  if (!start || !end || end <= start) {
+    return [];
+  }
+
+  return [`${start}-${end}`];
+}
+
+export function hasValidAvailabilityWindow(slots: string[] = []): boolean {
+  return slots.some((slot) => {
+    const [start, end] = slot.split('-');
+    return Boolean(start && end && end > start);
+  });
+}
+
 interface LocalDateTime {
   year: number;
   month: number;

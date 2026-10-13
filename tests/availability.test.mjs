@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { findOverlappingSlots } from '../src/lib/availability.ts';
+import { buildAvailabilitySlot, findOverlappingSlots, hasValidAvailabilityWindow } from '../src/lib/availability.ts';
 
 const now = new Date('2026-10-09T12:00:00.000Z');
 
@@ -49,4 +49,12 @@ test('ignores invalid availability time zones safely', () => {
     findOverlappingSlots({ Mon: ['18:00-20:00'] }, 'Invalid/Zone', { Mon: ['18:00-20:00'] }, 'UTC', now),
     []
   );
+});
+
+test('keeps a partially entered availability window until both times are valid', () => {
+  assert.deepEqual(buildAvailabilitySlot('18:00', ''), []);
+  assert.deepEqual(buildAvailabilitySlot('', '20:00'), []);
+  assert.deepEqual(buildAvailabilitySlot('18:00', '20:00'), ['18:00-20:00']);
+  assert.equal(hasValidAvailabilityWindow(['18:00-20:00']), true);
+  assert.equal(hasValidAvailabilityWindow(['20:00-18:00']), false);
 });

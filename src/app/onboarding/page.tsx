@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import SkillPicker from '@/components/SkillPicker';
 import { saveProfile, type Profile } from '@/lib/auth';
+import { buildAvailabilitySlot, hasValidAvailabilityWindow } from '@/lib/availability';
 import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, ArrowRight, ArrowRightLeft, Sparkles, Upload, User } from 'lucide-react';
 
@@ -134,10 +135,9 @@ export default function Onboarding() {
     const existing = f.availability?.[day]?.[0]?.split('-') || ['', ''];
     const times: [string, string] = [existing[0] || '', existing[1] || ''];
     times[index] = value;
+
     const availability = { ...(f.availability || {}) };
-    availability[day] = times[0] && times[1] && times[1] > times[0]
-      ? [`${times[0]}-${times[1]}`]
-      : [];
+    availability[day] = buildAvailabilitySlot(times[0], times[1]);
     set('availability', availability);
   };
 
@@ -171,10 +171,7 @@ export default function Onboarding() {
     }
     if (step === 3 && f.learn.length === 0)
       return 'Pick at least one skill you want to learn.';
-    if (step === 4 && !Object.values(f.availability || {}).some((slots) => slots.some((slot) => {
-      const [start, end] = slot.split('-');
-      return Boolean(start && end && end > start);
-    })))
+    if (step === 4 && !hasValidAvailabilityWindow(Object.values(f.availability || {}).flat()))
       return 'Set at least one weekly availability window so peers can match with you.';
     return '';
   }
