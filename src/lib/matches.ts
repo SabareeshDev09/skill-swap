@@ -22,12 +22,13 @@ export function computePeerMatches(learner: Profile, teachers: Profile[]): PeerM
       continue;
     }
 
-    // 1. Language intersection check (Hard filter: >= 1 common language)
-    const teacherLanguages = new Set(teacher.languages.map(normalizeSkillName));
-    const commonLanguages = learner.languages.filter((language) =>
+    // 1. Language intersection check. Missing language metadata should not block a valid swap/learn match.
+    const teacherLanguages = new Set((teacher.languages || []).map(normalizeSkillName).filter(Boolean));
+    const learnerLanguages = learner.languages || [];
+    const commonLanguages = learnerLanguages.filter((language) =>
       teacherLanguages.has(normalizeSkillName(language))
     );
-    if (commonLanguages.length === 0) {
+    if (teacherLanguages.size > 0 && learnerLanguages.length > 0 && commonLanguages.length === 0) {
       continue;
     }
 

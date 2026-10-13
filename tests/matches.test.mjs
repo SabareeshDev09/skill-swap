@@ -113,6 +113,21 @@ test('rejects exploratory matches without either skill fit', () => {
   assert.deepEqual(computePeerMatches(learner, [teacher]), []);
 });
 
+test('allows swapping when one or both profiles are missing language metadata', () => {
+  const learner = profile('learner', {
+    languages: [],
+    learnSkills: [{ skillId: 'skill-js', skillName: 'JavaScript', category: 'Technology', targetLevel: 'beginner' }],
+  });
+  const teacher = profile('teacher', {
+    languages: [],
+    teachSkills: [skill('skill-js', 'JavaScript')],
+  });
+
+  const matches = computePeerMatches(learner, [teacher]);
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].isSwapMatch, false);
+});
+
 test('rejects availability shorter than the shortest allowed session duration', () => {
   const learner = profile('learner', {
     learnSkills: [{ skillId: 'skill-js', skillName: 'JavaScript', category: 'Technology', targetLevel: 'beginner' }],

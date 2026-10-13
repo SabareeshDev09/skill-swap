@@ -83,6 +83,9 @@ function toLearnSkill(row: LearnSkillRow): UserLearnSkill | null {
 }
 
 function toPeer(row: PeerProfileRow): Profile {
+  const teachSkills = Array.isArray(row.user_skills_teach) ? row.user_skills_teach : [];
+  const learnSkills = Array.isArray(row.user_skills_learn) ? row.user_skills_learn : [];
+
   return {
     id: row.id,
     email: row.email || '',
@@ -92,7 +95,7 @@ function toPeer(row: PeerProfileRow): Profile {
     city: row.city || '',
     country: row.country || '',
     timezone: row.timezone || 'UTC',
-    languages: row.languages || [],
+    languages: Array.isArray(row.languages) ? row.languages : [],
     phoneVerified: row.phone_verified === true,
     isOnboarded: row.is_onboarded === true,
     isAcceptingRequests: row.is_accepting_requests === true,
@@ -100,8 +103,8 @@ function toPeer(row: PeerProfileRow): Profile {
     reputationScore: Number(row.reputation_score ?? 0),
     completedSessionsCount: 0,
     availability: readAvailability(row.availability),
-    teachSkills: row.user_skills_teach.map(toTeachSkill).filter((skill): skill is UserTeachSkill => skill !== null),
-    learnSkills: row.user_skills_learn.map(toLearnSkill).filter((skill): skill is UserLearnSkill => skill !== null),
+    teachSkills: teachSkills.map(toTeachSkill).filter((skill): skill is UserTeachSkill => skill !== null),
+    learnSkills: learnSkills.map(toLearnSkill).filter((skill): skill is UserLearnSkill => skill !== null),
   };
 }
 
