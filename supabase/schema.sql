@@ -85,7 +85,7 @@ SECURITY INVOKER
 SET search_path = ''
 AS $$
 BEGIN
-    IF current_setting('request.jwt.claim.role', true) IS DISTINCT FROM 'service_role' THEN
+    IF COALESCE(NULLIF(current_setting('request.jwt.claim.role', true), ''), NULLIF(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role') IS DISTINCT FROM 'service_role' THEN
         RAISE EXCEPTION 'Service role required' USING ERRCODE = '42501';
     END IF;
 
@@ -137,9 +137,9 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.replace_user_skills(UUID, TEXT[], TEXT[], BOOLEAN, TEXT, INT, NUMERIC, INT[], TEXT[])
+REVOKE ALL ON FUNCTION public.replace_user_skills(UUID, TEXT[], TEXT[], BOOLEAN, TEXT, INT, NUMERIC, INT[], TEXT)
     FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.replace_user_skills(UUID, TEXT[], TEXT[], BOOLEAN, TEXT, INT, NUMERIC, INT[], TEXT[])
+GRANT EXECUTE ON FUNCTION public.replace_user_skills(UUID, TEXT[], TEXT[], BOOLEAN, TEXT, INT, NUMERIC, INT[], TEXT)
     TO service_role;
 
 -- 4. Wallets & Double-Entry Ledger (paise precision: 1 token = 100 paise)

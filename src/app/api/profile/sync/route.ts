@@ -133,8 +133,11 @@ export async function POST(req: NextRequest) {
     });
 
     if (skillsError) {
-      console.error('Skill replacement error:', skillsError);
-      return NextResponse.json({ error: 'Failed to save skills' }, { status: 500 });
+      console.error('Skill replacement error:', skillsError.message, skillsError.code);
+      return NextResponse.json({
+        error: skillsError.message,
+        code: skillsError.code,
+      }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
