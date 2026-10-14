@@ -992,7 +992,6 @@ export default function Dashboard() {
             onAcceptProposedTime={handleAcceptProposedTime}
             onAcceptOffer={handleAcceptOffer}
             onDeclineOffer={handleDeclineOffer}
-            onConfirmSession={handleConfirmSession}
             onDisputeSession={handleDisputeSession}
             onNavigateToDiscover={() => setActiveTab('matches')}
             selectedSwapId={selectedSwapId}
